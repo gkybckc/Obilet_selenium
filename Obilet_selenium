@@ -1,0 +1,80 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.options import Options
+import pandas as pd
+import time
+
+# Create FirefoxOptions and enable Headless mode
+firefox_options = Options()
+firefox_options.add_argument('--headless')
+
+# Initialize WebDriver and input values
+# This part can be accessed directly from the URL, but specific codes prompt the user to select cities.
+# Selection process is a bit challenging due to the presence of JavaScript on the Obilet page.
+driver = webdriver.Firefox(options=firefox_options)
+year = input('Example year: 2024 = ')
+month = input('Example month: 01 = ')
+day = input('Example day: 26 = ')
+departure_city = int(input('Departure city code = 366 for Bursa: '))
+arrival_city = int(input('Arrival city code = 375 for Erzurum: '))
+
+# Open the webpage and perform actions
+url = f'https://www.obilet.com/seferler/{departure_city}-{arrival_city}/{year}-{month}-{day}'
+driver.get(url)
+print(driver.title)
+time.sleep(5)
+
+
+def get_schedule():
+    schedule_data = []
+    date_info = driver.execute_script("return document.querySelector('ob-datepicker').getAttribute('data-date');")
+    date_info = date_info.strip()
+
+    schedule_list = driver.find_elements(By.XPATH, "/html/body/main/ul/li")
+
+    for schedule in schedule_list:
+        try:
+            # Get content using JavaScript
+            schedule_info = driver.execute_script(
+                "return arguments[0].querySelector('img').getAttribute('alt');", schedule).strip()
+            print(schedule_info)
+
+            time_info = driver.execute_script(
+                'return arguments[0].querySelector("div.main.row > div.time.col > div.departure").textContent;',
+                schedule).strip()
+            print(time_info)
+
+            price_info = driver.execute_script(
+                'return arguments[0].querySelector("div.main.row > div.price.col > div.content.notranslate > span > span.amount-integer").textContent;',
+                schedule).strip()
+            print(price_info)
+
+            schedule_data.append({'Date': date_info, 'Schedule': schedule_info, 'Time': time_info, 'Price': price_info})
+
+        except Exception as e:
+            print("Schedule information not found. Error:", str(e))
+
+    click_button = driver.find_element(By.XPATH, "/html/body/main/div[1]/div/button[3]").click()
+    time.sleep(10)
+
+    return schedule_data
+
+
+week = [1, 2, 3, 4, 5, 6, 7]  # For example, days of the week
+all_data = []
+
+for day_index in week:
+    if day_index <= len(week):
+        day_data = get_schedule()
+        all_data.extend(day_data)
+    else:
+        break
+
+# Create a Pandas DataFrame
+df = pd.DataFrame(all_data)
+
+# Write data to an Excel file
+df.to_excel("7schedule_info.xlsx", index=False)
+
+# Close the WebDriver
+driver.quit()
