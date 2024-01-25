@@ -74,7 +74,7 @@ for day_index in week:
 df = pd.DataFrame(all_data)
 
 # Write data to an Excel file
-df.to_excel("7schedule_info.xlsx", index=False)
+df.to_excel("schedule_info.xlsx", index=False)
 
 # Close the WebDriver
 driver.quit()
